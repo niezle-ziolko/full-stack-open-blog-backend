@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN password TEXT;
+ALTER TABLE blogs ADD COLUMN year TEXT;

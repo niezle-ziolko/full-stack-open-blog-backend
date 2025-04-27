@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "full-stack-open-blog-backend",
+	"main": "src/index.js",
+	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_date": "2025-04-27",
+	"observability": {
+		"enabled": true
+	},
+	"dev": {
+        "ip": "127.0.0.1",
+        "port": 3000,
+        "local_protocol": "http"
+    },
+    "placement": {
+		"mode": "smart"
+	},
+	"d1_databases": [
+		{
+			"binding": "D1",
+			"database_name": "fullstackopen",
+			"database_id": "3722e53e-e4ef-4314-9354-f0897d336f28"
+		}
+	],
+	"vars": {
+		"TOKEN": "12345"
+	}
+}
