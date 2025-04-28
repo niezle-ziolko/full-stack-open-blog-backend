@@ -1,5 +1,5 @@
-import { query } from "../utils/database.js";
 import { createToken } from "../utils/token.js";
+import { query, run } from "../utils/database.js";
 import { verifyPassword } from "../utils/password.js";
 
 export async function handleLogin(request, env) {
@@ -24,7 +24,18 @@ export async function handleLogin(request, env) {
     );
   };
 
+  if (user.disabled) {
+    return new Response(
+      JSON.stringify({ error: "User account disabled" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
   const token = createToken(username, env);
+
+  await run(env, `
+    INSERT INTO sessions (id, user_id) VALUES (?, ?)
+  `, [token, user.id]);
 
   return new Response(
     JSON.stringify({ token }),

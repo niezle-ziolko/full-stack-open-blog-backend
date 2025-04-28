@@ -11,21 +11,80 @@ export async function handleUsers(request, env, pathname) {
   const method = request.method;
 
   if (method === "GET") {
-    const { results: users } = await query(env, `
-      SELECT id, name, username, created_at, updated_at 
-      FROM users
-    `);
+    const userId = pathname.split("/").pop();
 
-    for (let user of users) {
+    if (userId && userId !== "users") {
+      const { results: users } = await query(env, `
+        SELECT id, name, username, created_at, updated_at
+        FROM users
+        WHERE id = ?
+      `, [userId]);
+
+      if (users.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "User not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      };
+
+      const user = users[0];
+
+      const url = new URL(request.url);
+      const readParam = url.searchParams.get("read");
+      let readFilter = "";
+
+      if (readParam === "true") {
+        readFilter = "AND r.read = 1";
+      } else if (readParam === "false") {
+        readFilter = "AND (r.read = 0 OR r.read IS NULL)";
+      };
+
       const { results: blogs } = await query(env, `
-        SELECT id, title, url, likes 
-        FROM blogs WHERE author = ?
-      `, [user.username]);
+        SELECT b.id AS blog_id, b.title, b.url, b.author, b.likes, b.year,
+          r.id AS readinglist_id, r.read
+        FROM blogs b
+        LEFT JOIN reading_lists r ON b.id = r.blog_id AND r.user_id = ?
+        WHERE b.author = ?
+        ${readFilter}
+      `, [userId, user.username]);
 
-      user.blogs = blogs;
+      user.readings = blogs.map(blog => {
+        const readinglist = blog.readinglist_id ? [
+          {
+            read: blog.read || false,
+            id: blog.readinglist_id
+          }
+        ] : [];
+
+        return {
+          id: blog.blog_id,
+          url: blog.url,
+          title: blog.title,
+          author: blog.author,
+          likes: blog.likes,
+          year: blog.year,
+          readinglists: readinglist
+        };
+      });
+
+      return Response.json(user);
+    } else {
+      const { results: users } = await query(env, `
+        SELECT id, name, username, created_at, updated_at
+        FROM users
+      `);
+
+      for (let user of users) {
+        const { results: blogs } = await query(env, `
+          SELECT id, title, url, likes 
+          FROM blogs WHERE author = ?
+        `, [user.username]);
+
+        user.blogs = blogs;
+      };
+
+      return Response.json(users);
     };
-  
-    return Response.json(users);
   };
 
   if (method === "POST") {
